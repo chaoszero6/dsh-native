@@ -40,6 +40,8 @@ class AndroidPlatform(private val ctx: Context) : PlatformServices {
     private var pickLauncher: ActivityResultLauncher<Array<String>>? = null
     private var saveLauncher: ActivityResultLauncher<String>? = null
     private var pendingSaveMime = "application/octet-stream"
+    private var dictateResult: CompletableDeferred<String?>? = null
+    private var dictateLauncher: ActivityResultLauncher<Intent>? = null
 
     init { createChannels() }
 
@@ -52,6 +54,24 @@ class AndroidPlatform(private val ctx: Context) : PlatformServices {
         saveLauncher = activity.registerForActivityResult(object : ActivityResultContracts.CreateDocument("*/*") {
             override fun createIntent(context: Context, input: String): Intent = super.createIntent(context, input).setType(pendingSaveMime)
         }) { uri -> saveResult?.complete(uri); saveResult = null }
+        dictateLauncher = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+            val text = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            dictateResult?.complete(text); dictateResult = null
+        }
+    }
+
+    override val canDictate: Boolean
+        get() = android.speech.SpeechRecognizer.isRecognitionAvailable(ctx)
+
+    override suspend fun dictate(): String? {
+        val launcher = dictateLauncher ?: return null
+        val d = CompletableDeferred<String?>()
+        dictateResult = d
+        val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak to DSH")
+        withContext(Dispatchers.Main) { runCatching { launcher.launch(intent) }.onFailure { d.complete(null) } }
+        return d.await()
     }
 
     override fun openUrl(url: String) {

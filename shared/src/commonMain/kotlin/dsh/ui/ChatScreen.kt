@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
@@ -412,6 +413,9 @@ private fun Composer(client: DshClient, conv: ConversationController, sessionId:
                     colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent),
                     maxLines = 10,
                 )
+                if (platform.canDictate) IconButton({
+                    scope.launch { platform.dictate()?.let { t -> value = TextFieldValue((value.text + (if (value.text.isBlank()) "" else " ") + t), TextRange(value.text.length + t.length + 1)) } }
+                }, enabled = enabled) { Icon(Icons.Default.Mic, "Dictate") }
                 Spacer(Modifier.width(6.dp))
                 if (running) {
                     FilledIconButton({ scope.launch { conv.cancel() } }, colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.error)) {

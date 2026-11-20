@@ -72,5 +72,9 @@ fun main() = runBlocking {
         app.pendingPanel.value = panel
         shoot(name, 7000)
     }
+    app.pendingPanel.value = dsh.ui.SidePanel.Settings
+    shoot("07-settings", 7000)
+    app.pendingPanel.value = dsh.ui.SidePanel.Plugins
+    shoot("08-plugins", 6000)
     app.client.value?.close()
 }

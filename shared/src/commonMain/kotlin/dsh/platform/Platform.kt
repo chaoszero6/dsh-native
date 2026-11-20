@@ -24,6 +24,9 @@ interface PlatformServices {
     fun cancelNotification(id: String) {}
     /** Called when a turn starts/stops or approvals are pending, so Android can hold a foreground service. */
     fun setBackgroundActivity(active: Boolean, summary: String) {}
+    /** On-device speech-to-text (Android system recognizer). Null when unsupported or cancelled. */
+    val canDictate: Boolean get() = false
+    suspend fun dictate(): String? = null
     /** Renders the pages of a PDF to PNG bytes (for document preview). Null if unsupported. */
     suspend fun renderPdf(bytes: ByteArray, maxPages: Int = 20, widthPx: Int = 1400): List<ByteArray>? = null
 }

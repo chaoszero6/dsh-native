@@ -84,6 +84,29 @@ class LiveServerTest {
             } finally { client.api.terminal.close(newest.id, tid) }
         }
 
+        // Reversible settings round trip: set ui-theme.fontSize to its current value, then unset (restores the user layer).
+        if (System.getenv("DSH_LIVE_SETTINGS") == "1") {
+            fun ns(d: kotlinx.serialization.json.JsonElement) = (d as kotlinx.serialization.json.JsonObject)["namespaces"]!!.let { it as kotlinx.serialization.json.JsonArray }
+                .first { (it as kotlinx.serialization.json.JsonObject)["ns"].toString().trim('"') == "ui-theme" } as kotlinx.serialization.json.JsonObject
+            val before = ns(client.conn.callRaw("settings/describe", kotlinx.serialization.json.JsonObject(emptyMap())))
+            val userBefore = before["user"] as kotlinx.serialization.json.JsonObject
+            if (userBefore.isEmpty()) {
+                val font = (before["value"] as kotlinx.serialization.json.JsonObject)["fontSize"]!!
+                fun op(o: String, v: kotlinx.serialization.json.JsonElement?) = kotlinx.serialization.json.buildJsonObject {
+                    put("op", kotlinx.serialization.json.JsonPrimitive(o)); put("path", kotlinx.serialization.json.JsonArray(listOf(kotlinx.serialization.json.JsonPrimitive("fontSize")))); if (v != null) put("value", v)
+                }
+                val afterSet = client.conn.callRaw("settings/mutate", kotlinx.serialization.json.buildJsonObject {
+                    put("ns", kotlinx.serialization.json.JsonPrimitive("ui-theme")); put("ops", kotlinx.serialization.json.JsonArray(listOf(op("set", font)))); put("expectedRevision", before["revision"]!!)
+                }) as kotlinx.serialization.json.JsonObject
+                assertTrue((afterSet["user"] as kotlinx.serialization.json.JsonObject).containsKey("fontSize"), "set did not land: $afterSet")
+                val afterUnset = client.conn.callRaw("settings/mutate", kotlinx.serialization.json.buildJsonObject {
+                    put("ns", kotlinx.serialization.json.JsonPrimitive("ui-theme")); put("ops", kotlinx.serialization.json.JsonArray(listOf(op("unset", null)))); put("expectedRevision", afterSet["revision"]!!)
+                }) as kotlinx.serialization.json.JsonObject
+                assertTrue((afterUnset["user"] as kotlinx.serialization.json.JsonObject).isEmpty(), "unset did not restore: $afterUnset")
+                println("settings round trip ok (revision ${before["revision"]} -> ${afterUnset["revision"]})")
+            } else println("settings round trip skipped: ui-theme already has user overrides")
+        }
+
         if (System.getenv("DSH_LIVE_PROMPT") == "1") {
             val cwd = System.getenv("DSH_LIVE_CWD") ?: "/tmp"
             val sid = client.createSession(cwd = cwd)

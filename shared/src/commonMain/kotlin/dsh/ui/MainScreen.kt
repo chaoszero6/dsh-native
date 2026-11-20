@@ -38,7 +38,7 @@ import dsh.transport.get
 import dsh.transport.str
 
 /** Which panel occupies the right dock (wide) or a full-screen detail (compact). */
-enum class SidePanel { Files, Terminal, Changes, Plan, Jobs, Goal, Subagents, Trajectory, Schedules, Settings }
+enum class SidePanel { Files, Terminal, Changes, Plan, Jobs, Goal, Subagents, Trajectory, Schedules, Settings, Plugins }
 
 data class SubagentRef(val parent: String, val child: String, val mode: String, val label: String?)
 
@@ -71,7 +71,13 @@ fun MainScreen(app: AppState, client: DshClient) {
     }
     val pendingPanel by app.pendingPanel.collectAsState()
     LaunchedEffect(pendingPanel, nav.selected) {
-        if (pendingPanel != null && nav.selected != null) { nav.panel = pendingPanel; app.pendingPanel.value = null }
+        when (pendingPanel) {
+            null -> Unit
+            SidePanel.Settings -> { nav.showSettings = true; app.pendingPanel.value = null }
+            SidePanel.Schedules -> { nav.showSchedules = true; app.pendingPanel.value = null }
+            SidePanel.Plugins -> { nav.showPlugins = true; app.pendingPanel.value = null }
+            else -> if (nav.selected != null) { nav.showSettings = false; nav.showPlugins = false; nav.showSchedules = false; nav.panel = pendingPanel; app.pendingPanel.value = null }
+        }
     }
     // Background notifications: approvals/questions and finished turns.
     val notified = remember { HashSet<String>() }

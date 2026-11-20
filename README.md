@@ -17,8 +17,14 @@ with thin platform shells for Android (`androidApp/`) and desktop/Windows (`desk
 | Approvals & agent questions (incl. plan review) inline, global “needs input” banner, Android notification actions (Allow/Reject) | ✅ |
 | Model + reasoning effort, permission mode, agent preset pickers; context usage | ✅ |
 | Session export (ZIP) | ✅ |
-| Files & document preview, terminal, changed files/diffs, plans, goals, subagents, jobs, trajectory | Phase 2 |
-| Schedules, server settings (models/providers/API keys, account, plugin pages), plugin manager, voice input | Phase 3 |
+| Files (live) & document preview: code, markdown, images, PDF, Office (server-side render), download | ✅ |
+| Terminal: real server shells with a VT100/xterm emulator, mobile key bar | ✅ |
+| Changed files per turn with diffs, delivered files | ✅ |
+| Plan mode & submitted plans, goals, subagents (view / continue / interrupt), background jobs, trajectory & stats, message feedback | ✅ |
+| Scheduled tasks (edit / history / delete) | ✅ (when the server's schedule plugin is enabled) |
+| Server settings: schema-driven editor for every namespace, secrets, default model, providers + model discovery | ✅ |
+| DeepSeek account (sign-in via browser, balance, sign-out), plugin manager (bundles/plugins, install from registry) | ✅ |
+| Voice: on-device dictation on Android | ✅ |
 
 ## How it talks to DSH
 All details were derived from the DSH sources (`packages/client/connection`, `packages/api/gateway`):
@@ -55,7 +61,13 @@ DSH_LIVE_PROMPT=1 …                                             # also sends o
 DSH_URL=… DSH_COOKIE=… ./gradlew :desktopApp:screenshots         # headless screenshots of the real UI
 ```
 
+## Releases
+`v*` tags trigger `.github/workflows/release.yml`, which builds the Windows `.exe`/`.msi` on a Windows runner and attaches
+them to the GitHub Release. The APK is built with `./gradlew :androidApp:assembleRelease`.
+
 ## Notes
+- DSH account sign-in uses a loopback callback; DSH may refuse it from remote clients (sign in on the host instead).
+- Server-side speech-to-text needs DSH's experimental voice-input bundle; the Android app dictates on-device instead.
 - nginx (or any proxy) in front of DSH must forward WebSocket upgrades for `/api/remote.mux` and keep `Host`/`Origin`
   acceptable to DSH (loopback or `--trusted-host`).
 - Not portable natively: DSH "creator" Cordis plugins that execute browser JavaScript; the web UI's embedded browser tab

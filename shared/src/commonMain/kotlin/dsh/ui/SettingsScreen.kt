@@ -73,6 +73,3 @@ fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boo
     }
 }
 
-/** Server settings (models/providers, credentials, account, plugin pages) — Phase 3. */
-@Composable
-fun ServerSettingsSections(client: DshClient) {}
