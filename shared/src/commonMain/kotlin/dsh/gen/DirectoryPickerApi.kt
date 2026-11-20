@@ -23,9 +23,9 @@ class DirectoryPickerApi(private val t: DshTransport) {
         }, String.serializer())
 
     /** `directoryPicker/list` — packages/api/workspace-controller/src/directory-picker.ts:72 */
-    suspend fun list(path: JsonElement): DirectoryListing =
+    suspend fun list(path: String? = null): DirectoryListing =
         t.call("directoryPicker/list", buildJsonObject {
-            put("path", t.json.encodeToJsonElement(JsonElement.serializer(), path))
+            if (path != null) put("path", t.json.encodeToJsonElement(String.serializer(), path))
         }, DirectoryListing.serializer())
 
     /** `directoryPicker/pick` — packages/api/workspace-controller/src/directory-picker.ts:55 */

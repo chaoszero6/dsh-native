@@ -22,17 +22,17 @@ class PluginManagerApi(private val t: DshTransport) {
         }, PluginInstallCancellation.serializer())
 
     /** `pluginManager/inspect` — packages/boot/plugin-manager/src/index.ts:341 */
-    suspend fun inspect(spec: String, options: JsonElement): PluginSpecInspection =
+    suspend fun inspect(spec: String, options: InspectOptions? = null): PluginSpecInspection =
         t.call("pluginManager/inspect", buildJsonObject {
             put("spec", t.json.encodeToJsonElement(String.serializer(), spec))
-            put("options", t.json.encodeToJsonElement(JsonElement.serializer(), options))
+            if (options != null) put("options", t.json.encodeToJsonElement(InspectOptions.serializer(), options))
         }, PluginSpecInspection.serializer())
 
     /** `pluginManager/installBundle` — packages/boot/plugin-manager/src/index.ts:462 */
-    suspend fun installBundle(spec: String, options: JsonElement): ChangeResult =
+    suspend fun installBundle(spec: String, options: InstallBundleOptions? = null): ChangeResult =
         t.call("pluginManager/installBundle", buildJsonObject {
             put("spec", t.json.encodeToJsonElement(String.serializer(), spec))
-            put("options", t.json.encodeToJsonElement(JsonElement.serializer(), options))
+            if (options != null) put("options", t.json.encodeToJsonElement(InstallBundleOptions.serializer(), options))
         }, ChangeResult.serializer())
 
     /** `pluginManager/listBundles` — packages/boot/plugin-manager/src/index.ts:280 */
@@ -72,12 +72,12 @@ class PluginManagerApi(private val t: DshTransport) {
         }, ChangeResult.serializer())
 
     /** `pluginManager/setVersionExemption` — packages/boot/plugin-manager/src/index.ts:245 */
-    suspend fun setVersionExemption(packageVersion: String, runtimeVersion: String, enabled: Boolean, acceptRisk: JsonElement): ChangeResult =
+    suspend fun setVersionExemption(packageVersion: String, runtimeVersion: String, enabled: Boolean, acceptRisk: Boolean? = null): ChangeResult =
         t.call("pluginManager/setVersionExemption", buildJsonObject {
             put("packageVersion", t.json.encodeToJsonElement(String.serializer(), packageVersion))
             put("runtimeVersion", t.json.encodeToJsonElement(String.serializer(), runtimeVersion))
             put("enabled", t.json.encodeToJsonElement(Boolean.serializer(), enabled))
-            put("acceptRisk", t.json.encodeToJsonElement(JsonElement.serializer(), acceptRisk))
+            if (acceptRisk != null) put("acceptRisk", t.json.encodeToJsonElement(Boolean.serializer(), acceptRisk))
         }, ChangeResult.serializer())
 
     /** `pluginManager/waitForInstall` — packages/boot/plugin-manager/src/index.ts:575 */

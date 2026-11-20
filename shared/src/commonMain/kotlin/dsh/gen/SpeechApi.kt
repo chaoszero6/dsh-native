@@ -36,10 +36,10 @@ class SpeechApi(private val t: DshTransport) {
         t.stream("speech/follow", buildJsonObject {}, SpeechCatalog.serializer())
 
     /** `speech/prepare` — packages/experimental/api-speech-to-text/src/index.ts:72 */
-    suspend fun prepare(providerId: String, options: JsonElement): JsonElement =
+    suspend fun prepare(providerId: String, options: SpeechPreparationOptions? = null): JsonElement =
         t.call("speech/prepare", buildJsonObject {
             put("providerId", t.json.encodeToJsonElement(String.serializer(), providerId))
-            put("options", t.json.encodeToJsonElement(JsonElement.serializer(), options))
+            if (options != null) put("options", t.json.encodeToJsonElement(SpeechPreparationOptions.serializer(), options))
         }, JsonElement.serializer())
 
     /** `speech/transcribe` — packages/experimental/api-speech-to-text/src/index.ts:89 */

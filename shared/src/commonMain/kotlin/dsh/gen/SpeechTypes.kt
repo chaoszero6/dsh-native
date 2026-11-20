@@ -82,6 +82,11 @@ data class SpeechSelectionPatch(
 )
 
 @Serializable
+data class SpeechPreparationOptions(
+    val downloadSource: String? = null,
+)
+
+@Serializable
 data class TranscriptionRequest(
     val audioBase64: String,
     val providerId: String? = null,

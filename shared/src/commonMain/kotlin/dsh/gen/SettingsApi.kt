@@ -20,11 +20,11 @@ class SettingsApi(private val t: DshTransport) {
         t.call("settings/describe", buildJsonObject {}, SettingsDescribeValue.serializer())
 
     /** `settings/mutate` — packages/api/settings-controller/src/index.ts:152 */
-    suspend fun mutate(ns: String, ops: List<SettingsMutateOpsItem>, expectedRevision: JsonElement): SettingsNamespaceView =
+    suspend fun mutate(ns: String, ops: List<SettingsMutateOpsItem>, expectedRevision: Double? = null): SettingsNamespaceView =
         t.call("settings/mutate", buildJsonObject {
             put("ns", t.json.encodeToJsonElement(String.serializer(), ns))
             put("ops", t.json.encodeToJsonElement(ListSerializer(SettingsMutateOpsItem.serializer()), ops))
-            put("expectedRevision", t.json.encodeToJsonElement(JsonElement.serializer(), expectedRevision))
+            if (expectedRevision != null) put("expectedRevision", t.json.encodeToJsonElement(Double.serializer(), expectedRevision))
         }, SettingsNamespaceView.serializer())
 
     /** `settings/openSettingsDocument` — packages/api/settings-controller/src/index.ts:167 */
@@ -32,18 +32,18 @@ class SettingsApi(private val t: DshTransport) {
         t.call("settings/openSettingsDocument", buildJsonObject {}, SettingsDocumentOpenValue.serializer())
 
     /** `settings/replace` — packages/api/settings-controller/src/index.ts:133 */
-    suspend fun replace(ns: String, section: Map<String, JsonElement>, expectedRevision: JsonElement): SettingsNamespaceView =
+    suspend fun replace(ns: String, section: Map<String, JsonElement>, expectedRevision: Double? = null): SettingsNamespaceView =
         t.call("settings/replace", buildJsonObject {
             put("ns", t.json.encodeToJsonElement(String.serializer(), ns))
             put("section", t.json.encodeToJsonElement(MapSerializer(String.serializer(), JsonElement.serializer()), section))
-            put("expectedRevision", t.json.encodeToJsonElement(JsonElement.serializer(), expectedRevision))
+            if (expectedRevision != null) put("expectedRevision", t.json.encodeToJsonElement(Double.serializer(), expectedRevision))
         }, SettingsNamespaceView.serializer())
 
     /** `settings/update` — packages/api/settings-controller/src/index.ts:116 */
-    suspend fun update(ns: String, patch: Map<String, JsonElement>, expectedRevision: JsonElement): SettingsNamespaceView =
+    suspend fun update(ns: String, patch: Map<String, JsonElement>, expectedRevision: Double? = null): SettingsNamespaceView =
         t.call("settings/update", buildJsonObject {
             put("ns", t.json.encodeToJsonElement(String.serializer(), ns))
             put("patch", t.json.encodeToJsonElement(MapSerializer(String.serializer(), JsonElement.serializer()), patch))
-            put("expectedRevision", t.json.encodeToJsonElement(JsonElement.serializer(), expectedRevision))
+            if (expectedRevision != null) put("expectedRevision", t.json.encodeToJsonElement(Double.serializer(), expectedRevision))
         }, SettingsNamespaceView.serializer())
 }

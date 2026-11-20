@@ -18,6 +18,11 @@ data class PluginInstallCancellation(
     val status: String,
 )
 
+@Serializable
+data class InspectOptions(
+    val registry: String? = null,
+)
+
 @Serializable(with = PluginSpecInspection.Serializer::class)
 sealed interface PluginSpecInspection {
     @Serializable
@@ -55,6 +60,14 @@ sealed interface PluginSpecInspection {
             }
     }
 }
+
+@Serializable
+data class InstallBundleOptions(
+    val enabled: Boolean? = null,
+    val requestId: String? = null,
+    val approvedBuilds: List<String>? = null,
+    val registry: String? = null,
+)
 
 @Serializable
 data class ChangeResult(

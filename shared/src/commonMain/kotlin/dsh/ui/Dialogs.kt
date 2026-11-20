@@ -141,7 +141,7 @@ fun DirectoryPickerDialog(client: DshClient, onDismiss: () -> Unit, onPick: (Str
     val scope = rememberCoroutineScope()
     LaunchedEffect(path, reload) {
         error = null
-        listing = runCatching { client.api.directoryPicker.list(path?.let { JsonPrimitive(it) } ?: JsonNull) }
+        listing = runCatching { client.api.directoryPicker.list(path) }
             .onFailure { error = it.message }.getOrNull()
     }
     AlertDialog(

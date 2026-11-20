@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -45,6 +46,11 @@ class LiveServerTest {
         println("sessions: ${client.sessions.value.size}")
         withTimeout(20_000) { client.workspaces.first { it.isNotEmpty() } }
         println("workspaces: ${client.workspaces.value.map { it.title }}")
+        // "Choose another folder": the initial listing omits `path` (an explicit null fails boundary validation).
+        val home = client.api.directoryPicker.list()
+        println("directoryPicker home=${home.path} entries=${home.entries.size}")
+        val child = home.entries.first { !it.hidden }
+        assertEquals(child.path, client.api.directoryPicker.list(child.path).path)
         withTimeout(20_000) { client.projections.first { it.isNotEmpty() } }
         val newest = client.sessions.value.values.filter { !it.blank }.maxBy { it.updatedAt }
         val conv = client.conversation(newest.id)

@@ -285,8 +285,17 @@ for (const [ns, methods] of byNs) {
     const base = pascal(ns) + pascal(m.method)
     const params = m.parameters.map((p) => {
       const hint = p.typeSymbol ? pascal(p.typeSymbol.split('#').pop()) : base + pascal(p.wire)
-      let t = p.source === 'lookup' ? 'String' : named(kt(p.schema, hint || base + 'Arg', ns, p.schema?.$defs), hint)
-      if (p.optional && !t.endsWith('?')) t += '?'
+      // `T | undefined` parameters export as anyOf [{}, T]. The gateway rejects an explicit null for
+      // them ("failed boundary validation"), so they become optional Kotlin params that are omitted when null.
+      let schema = p.schema
+      let undefinable = false
+      if (Array.isArray(schema?.anyOf) && schema.anyOf.some((x) => Object.keys(strip(x)).length === 0)) {
+        undefinable = true
+        const rest = schema.anyOf.filter((x) => Object.keys(strip(x)).length > 0)
+        schema = rest.length === 1 ? { ...rest[0], $defs: schema.$defs } : { ...schema, anyOf: rest }
+      }
+      let t = p.source === 'lookup' ? 'String' : named(kt(schema, hint || base + 'Arg', ns, schema?.$defs), hint)
+      if ((p.optional || undefinable) && !t.endsWith('?')) t += '?'
       return { p, t, id: ident(p.wire === '_request' ? 'request' : p.wire) }
     })
     const rhint = m.result?.typeSymbol ? pascal(m.result.typeSymbol.split('#').pop()) : base + 'Result'
