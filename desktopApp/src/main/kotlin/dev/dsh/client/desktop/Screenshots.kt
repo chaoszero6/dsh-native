@@ -23,7 +23,7 @@ import java.io.File
 fun main() = runBlocking {
     System.setProperty("java.awt.headless", "true")
     val out = File(System.getenv("SHOT_DIR") ?: "build/screenshots").apply { mkdirs() }
-    val w = System.getenv("SHOT_W")?.toInt() ?: 1400
+    val w = System.getenv("SHOT_W")?.toInt() ?: 1600
     val h = System.getenv("SHOT_H")?.toInt() ?: 880
     val mem = HashMap<String, String>()
     val platform = object : PlatformServices {
@@ -62,8 +62,15 @@ fun main() = runBlocking {
     withContext(Dispatchers.Main) { app.activate(Environment("shot", "My DSH", base, cookie)) }
     shoot("02-sessions", 6000)
     val client = app.client.value!!
-    val target = System.getenv("SHOT_SESSION") ?: client.sessions.value.values.filter { !it.blank && !it.isSubagent }.maxByOrNull { it.updatedAt }?.id
+    val byTitle = System.getenv("SHOT_TITLE")?.let { t -> client.projections.value.entries.firstOrNull { it.value.title?.contains(t, true) == true }?.key }
+    val target = byTitle ?: System.getenv("SHOT_SESSION") ?: client.sessions.value.values.filter { !it.blank && !it.isSubagent }.maxByOrNull { it.updatedAt }?.id
+    println("target session: $target — ${client.projections.value[target]?.title}")
     app.pendingOpenSession.value = target
     shoot("03-chat", 9000)
+    for ((name, panel) in listOf("04-changes" to dsh.ui.SidePanel.Changes, "05-files" to dsh.ui.SidePanel.Files, "06-trajectory" to dsh.ui.SidePanel.Trajectory)) {
+        app.pendingOpenSession.value = target
+        app.pendingPanel.value = panel
+        shoot(name, 7000)
+    }
     app.client.value?.close()
 }

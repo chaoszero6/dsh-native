@@ -194,12 +194,31 @@ class ConversationController(
         }
         if (text.isNotBlank()) content.add(0, SessionPromptRequestContentItem.Text(text))
         if (content.isEmpty()) return false
+        if (address is SessionFollowRequestAddress.Subagent) {
+            val sub = content.mapNotNull {
+                when (it) {
+                    is SessionPromptRequestContentItem.Text -> dsh.gen.SubagentPromptRequestContentItem.Text(it.text)
+                    is SessionPromptRequestContentItem.Image -> dsh.gen.SubagentPromptRequestContentItem.Image(it.mediaType, it.data, it.name)
+                    else -> null
+                }
+            }
+            return client.guard("Send to subagent") {
+                client.api.subagents.prompt(dsh.gen.SubagentPromptRequest(newId(), address.parentSessionId, address.childSessionId, address.mode,
+                    if (mode == "steer") "steer" else "queue", sub, currentTimeZoneId()))
+            } != null
+        }
         return client.guard("Send") {
             client.api.session.prompt(SessionPromptRequest(newId(), sessionId, mode, content, clientTimeZone = currentTimeZoneId()))
         } != null
     }
 
-    suspend fun cancel() = client.guard("Stop") { client.api.session.cancel(SessionCancelRequest(sessionId)) }
+    suspend fun cancel(): Any? = client.guard("Stop") {
+        if (address is SessionFollowRequestAddress.Subagent) client.api.subagents.interruptByParent(address.childSessionId, address.parentSessionId, address.mode)
+        else client.api.session.cancel(SessionCancelRequest(sessionId))
+    }
+
+    val isSubagent: Boolean get() = address is SessionFollowRequestAddress.Subagent
+    val subagentMode: String? get() = (address as? SessionFollowRequestAddress.Subagent)?.mode
 
     suspend fun queueRemove(itemId: String) = client.guard("Remove queued message") {
         client.api.session.updateQueue(SessionUpdateQueueRequest(sessionId, itemId, SessionUpdateQueueRequestAction.Remove()))
@@ -212,6 +231,34 @@ class ConversationController(
     suspend fun queueEdit(itemId: String, text: String) = client.guard("Edit queued message") {
         val content = listOf(dsh.gen.SessionUpdateQueueRequestActionEditContentItem("text", text))
         client.api.session.updateQueue(SessionUpdateQueueRequest(sessionId, itemId, SessionUpdateQueueRequestAction.Edit(content)))
+    }
+
+    // ---- message feedback (thumbs) ----
+    private val _feedback = MutableStateFlow<Map<String, dsh.gen.MessageFeedbackDeleteResultErrorVersionConflictCurrent>>(emptyMap())
+    val feedback: StateFlow<Map<String, dsh.gen.MessageFeedbackDeleteResultErrorVersionConflictCurrent>> = _feedback.asStateFlow()
+    private var feedbackLoaded = false
+
+    suspend fun loadFeedback() {
+        if (feedbackLoaded) return
+        feedbackLoaded = true
+        runCatching { client.api.messageFeedback.list(dsh.gen.MessageFeedbackListRequest(sessionId)) }.getOrNull()
+            ?.value?.items?.let { items -> _feedback.value = items.associateBy { it.messageId } }
+    }
+
+    /** Sets (or clears, when [rating] is null) the rating: "positive" | "negative". */
+    suspend fun setFeedback(messageId: String, rating: String?) {
+        val cur = _feedback.value[messageId]
+        client.guard("Feedback") {
+            if (rating == null) {
+                if (cur == null) return@guard
+                val r = client.api.messageFeedback.delete(dsh.gen.MessageFeedbackDeleteRequest(sessionId, messageId, cur.version))
+                if (r.error == null) _feedback.update { it - messageId } else client.notice("Feedback changed elsewhere; reloaded")
+            } else {
+                val r = client.api.messageFeedback.put(dsh.gen.MessageFeedbackPutRequest(sessionId, messageId, rating, ifVersion = cur?.version))
+                r.value?.let { v -> _feedback.update { it + (messageId to v) } }
+                if (r.error != null) { feedbackLoaded = false; loadFeedback(); client.notice("Feedback changed elsewhere; reloaded") }
+            }
+        }
     }
 
     /** Image bytes for an attachment referenced by an event (cached). */

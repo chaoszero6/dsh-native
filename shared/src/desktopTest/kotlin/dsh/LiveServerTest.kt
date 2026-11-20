@@ -59,6 +59,31 @@ class LiveServerTest {
         println("commands: " + client.commands(newest.id)?.take(8)?.map { it.name })
         if (st.hasMore) { conv.loadOlder(); delay(3000); println("after page: events=${conv.state.value.eventCount}") }
 
+        // Workspace files + terminal round trip (read-only listing; a temporary terminal that is closed afterwards).
+        val listing = client.api.workspaceFiles.list(newest.id, ".")
+        println("files in ${newest.cwd}: " + listing.entries.take(6).map { it.name })
+        if (System.getenv("DSH_LIVE_TERMINAL") == "1") {
+            val tid = "t-test-" + dsh.transport.newId().take(6)
+            client.api.terminal.create(newest.id, dsh.gen.TerminalCreateRequest(id = tid, cols = 80.0, rows = 24.0))
+            val att = "a-test-" + dsh.transport.newId().take(6)
+            val screen = dsh.term.VtScreen(80, 24)
+            try {
+                withTimeout(20_000) {
+                    var sent = false
+                    client.api.terminal.follow(newest.id, tid, att).first { f ->
+                        when (f) {
+                            is dsh.gen.TerminalFrame.Snapshot -> screen.feed(f.screen)
+                            is dsh.gen.TerminalFrame.Output -> screen.feed(f.data)
+                            else -> Unit
+                        }
+                        if (!sent) { sent = true; client.api.terminal.write(newest.id, tid, att, "echo DSH_TERM_\$((40+2))\r") }
+                        screen.text().contains("DSH_TERM_42")
+                    }
+                }
+                println("terminal ok: " + screen.text().lines().first { it.contains("DSH_TERM_42") && !it.contains("echo") })
+            } finally { client.api.terminal.close(newest.id, tid) }
+        }
+
         if (System.getenv("DSH_LIVE_PROMPT") == "1") {
             val cwd = System.getenv("DSH_LIVE_CWD") ?: "/tmp"
             val sid = client.createSession(cwd = cwd)

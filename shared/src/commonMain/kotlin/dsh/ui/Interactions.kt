@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mikepenz.markdown.m3.Markdown
 import dsh.data.DshClient
 import dsh.transport.Waterfall
 import dsh.transport.arr
@@ -121,7 +120,7 @@ private fun QuestionsCard(client: DshClient, w: Waterfall) {
             if (planReview) {
                 val q = questions.single()
                 q["question"].str?.let { Text(it, fontWeight = FontWeight.Medium) }
-                q["detail"].str?.let { Markdown(it) }
+                q["detail"].str?.let { DshMarkdown(it) }
                 val approve = q["intent"]["approve"].str ?: q["options"][0]["label"].str ?: "Approve"
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button({

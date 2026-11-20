@@ -100,13 +100,13 @@ fun ChatScreen(client: DshClient, nav: MainNav, sessionId: String, wide: Boolean
 }
 
 @Composable
-fun SubagentChatScreen(client: DshClient, nav: MainNav, parentId: String, childId: String, wide: Boolean) {
-    val conv = remember(parentId, childId) {
-        ConversationController(client, childId, SessionFollowRequestAddress.Subagent(parentId, childId, "continuable"))
+fun SubagentChatScreen(client: DshClient, nav: MainNav, ref: SubagentRef, wide: Boolean) {
+    val conv = remember(ref) {
+        ConversationController(client, ref.child, SessionFollowRequestAddress.Subagent(ref.parent, ref.child, ref.mode))
     }
     LaunchedEffect(conv) { conv.start() }
     androidx.compose.runtime.DisposableEffect(conv) { onDispose { conv.stop() } }
-    ChatView(client, nav, conv, childId, wide, subagentLabel = "Subagent", parentId = parentId)
+    ChatView(client, nav, conv, ref.child, wide, subagentLabel = ref.label ?: "Subagent", parentId = ref.parent)
 }
 
 @Composable
@@ -158,7 +158,9 @@ private fun ChatView(client: DshClient, nav: MainNav, conv: ConversationControll
         }
         for (w in mine) InteractionCard(client, w)
         QueueView(conv, proj)
-        Composer(client, conv, sessionId, running, enabled = sessions[sessionId]?.agentAvailable != false || subagentLabel != null)
+        if (conv.isSubagent && conv.subagentMode != "continuable") {
+            Text("One-shot subagent — read only", Modifier.fillMaxWidth().padding(12.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else Composer(client, conv, sessionId, running, enabled = sessions[sessionId]?.agentAvailable != false || subagentLabel != null)
     }
 }
 

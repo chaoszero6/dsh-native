@@ -40,6 +40,8 @@ import dsh.transport.str
 /** Which panel occupies the right dock (wide) or a full-screen detail (compact). */
 enum class SidePanel { Files, Terminal, Changes, Plan, Jobs, Goal, Subagents, Trajectory, Schedules, Settings }
 
+data class SubagentRef(val parent: String, val child: String, val mode: String, val label: String?)
+
 class MainNav {
     var selected by mutableStateOf<String?>(null)
     var panel by mutableStateOf<SidePanel?>(null)
@@ -48,8 +50,8 @@ class MainNav {
     var showSettings by mutableStateOf(false)
     var showSchedules by mutableStateOf(false)
     var showPlugins by mutableStateOf(false)
-    /** Subagent child being viewed (parentSessionId to childSessionId). */
-    var subagent by mutableStateOf<Pair<String, String>?>(null)
+    /** Subagent child being viewed. */
+    var subagent by mutableStateOf<SubagentRef?>(null)
 }
 
 @Composable
@@ -66,6 +68,10 @@ fun MainScreen(app: AppState, client: DshClient) {
     LaunchedEffect(client) { client.notices.collect { snackbar.showSnackbar(it.message) } }
     LaunchedEffect(pending, sessions.isNotEmpty()) {
         pending?.let { if (sessions.containsKey(it)) { nav.selected = it; app.pendingOpenSession.value = null } }
+    }
+    val pendingPanel by app.pendingPanel.collectAsState()
+    LaunchedEffect(pendingPanel, nav.selected) {
+        if (pendingPanel != null && nav.selected != null) { nav.panel = pendingPanel; app.pendingPanel.value = null }
     }
     // Background notifications: approvals/questions and finished turns.
     val notified = remember { HashSet<String>() }
@@ -171,7 +177,7 @@ private fun CenterPane(app: AppState, client: DshClient, nav: MainNav, wide: Boo
         nav.selected == null -> EmptyState(client, nav)
         else -> {
             val sub = nav.subagent
-            if (sub != null && sub.first == nav.selected) SubagentChatScreen(client, nav, sub.first, sub.second, wide)
+            if (sub != null && sub.parent == nav.selected) SubagentChatScreen(client, nav, sub, wide)
             else ChatScreen(client, nav, nav.selected!!, wide)
         }
     }

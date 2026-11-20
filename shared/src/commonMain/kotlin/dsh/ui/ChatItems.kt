@@ -37,6 +37,9 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,6 +51,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,7 +65,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.mikepenz.markdown.m3.Markdown
 import dsh.data.ConversationController
 import dsh.data.DshClient
 import dsh.model.ChatItem
@@ -79,7 +82,10 @@ import kotlinx.serialization.json.JsonPrimitive
 fun ChatItemView(item: ChatItem, conv: ConversationController, client: DshClient, nav: MainNav, sessionId: String) {
     when (item) {
         is ChatItem.User -> UserBubble(item, conv)
-        is ChatItem.Assistant -> AssistantBlock(item.parts, conv, streaming = false)
+        is ChatItem.Assistant -> Column {
+            AssistantBlock(item.parts, conv, streaming = false)
+            if (item.messageId != null && !conv.isSubagent) FeedbackRow(conv, item.messageId)
+        }
         is ChatItem.Tool -> ToolCard(item, nav, sessionId)
         is ChatItem.Notice -> NoticeLine(item.text, item.tone)
         is ChatItem.Todos -> TodoCard(item.todos.map { it.content to it.status })
@@ -88,7 +94,7 @@ fun ChatItemView(item: ChatItem, conv: ConversationController, client: DshClient
             if (item.reason == "error") ChatItem.Tone.Error else ChatItem.Tone.Warn,
         )
         is ChatItem.Compaction -> CollapsibleCard(Icons.Default.Inventory2, "Context compacted" + (item.tokens?.let { " · ${formatTokens(it)} tokens summarized" } ?: "")) {
-            SelectionContainer { Markdown(item.summary) }
+            SelectionContainer { DshMarkdown(item.summary) }
         }
         is ChatItem.Command -> CommandLine(item)
         is ChatItem.Deliverables -> DeliverablesCard(item, nav)
@@ -136,7 +142,7 @@ fun AssistantBlock(parts: List<Part>, conv: ConversationController?, streaming: 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for (p in parts) when (p) {
             is Part.Reasoning -> if (p.text.isNotBlank()) ReasoningView(p.text, streaming)
-            is Part.Text -> if (p.text.isNotBlank()) SelectionContainer { Markdown(p.text, modifier = Modifier.fillMaxWidth()) }
+            is Part.Text -> if (p.text.isNotBlank()) SelectionContainer { DshMarkdown(p.text, modifier = Modifier.fillMaxWidth()) }
             is Part.Image -> if (conv != null) AttachmentImage(conv, p)
             is Part.ToolCallPart -> if (streaming) ToolHeaderLine(Icons.Default.Build, p.name, summarizeArgsRaw(p.name, p.arguments), ToolStatus.Pending)
             else -> Unit
@@ -403,4 +409,20 @@ fun lineDiff(a: List<String>, b: List<String>): List<String> {
     while (i < a.size) out += "-${a[i++]}"
     while (j < b.size) out += "+${b[j++]}"
     return out
+}
+
+/** Thumbs up/down on an assistant message (`messageFeedback/put|delete`). */
+@Composable
+private fun FeedbackRow(conv: ConversationController, messageId: String) {
+    val all by conv.feedback.collectAsState()
+    LaunchedEffect(conv) { conv.loadFeedback() }
+    val rating = all[messageId]?.rating
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    fun set(r: String) { scope.launch { conv.setFeedback(messageId, if (rating == r) null else r) } }
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Icon(Icons.Default.ThumbUp, "Good response", Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable { set("positive") }.padding(6.dp),
+            tint = if (rating == "positive") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+        Icon(Icons.Default.ThumbDown, "Bad response", Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable { set("negative") }.padding(6.dp),
+            tint = if (rating == "negative") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+    }
 }

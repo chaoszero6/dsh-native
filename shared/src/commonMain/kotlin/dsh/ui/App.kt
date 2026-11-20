@@ -43,6 +43,9 @@ class AppState(val platform: PlatformServices) {
     /** Session to open once connected (e.g. from a notification tap). */
     val pendingOpenSession = MutableStateFlow<String?>(null)
 
+    /** Side panel to open once a session is shown (deep links, screenshot harness). */
+    val pendingPanel = MutableStateFlow<SidePanel?>(null)
+
     init {
         // Auto-reconnect to the last used environment if we still hold its cookie.
         store.get(store.prefs.value.lastEnvironmentId)?.takeIf { it.cookie != null }?.let { activate(it) }
