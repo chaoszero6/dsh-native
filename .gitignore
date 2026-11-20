@@ -1,0 +1,15 @@
+# Gradle / Kotlin
+.gradle/
+build/
+.kotlin/
+local.properties
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+# Signing / secrets
+*.jks
+*.keystore
+keystore.properties
+.env
