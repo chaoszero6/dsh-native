@@ -20,7 +20,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "DSH"
-            packageVersion = "1.0.0"
+            packageVersion = "1.1.0"
             description = "Native client for DeepSeek Harness"
             vendor = "DSH Native"
             modules("java.net.http", "jdk.crypto.ec", "java.naming", "jdk.unsupported")
